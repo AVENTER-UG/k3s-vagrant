@@ -1,0 +1,30 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$node_instances = 1
+$node_prefix = "k3s"
+
+DNS = ENV['NAMESERVER']
+COUNT = $node_instances
+PREFIX = $node_prefix
+
+Vagrant.configure("2") do |config|
+  (1..$node_instances).each do |x|
+    config.vm.define vm_name = "%s-%02d" % [$node_prefix, x] do |config|
+      config.vm.box_download_insecure = true
+      config.vm.box = "generic/ubuntu2204"
+      config.vm.network "private_network", ip: "192.168.56.#{x+20}"
+      config.vm.hostname = vm_name + ".internal"
+      config.vm.provision "shell", path: "provision.sh", env: {"NAMESERVER" => "#{DNS}", "_HOSTNAME" => vm_name , "_COUNT" => "#{COUNT}", "_PREFIX" => "#{PREFIX}", "_NODE_IP" => "192.168.56.#{x+20}" }
+      config.vm.provider :virtualbox do |v|
+        v.customize ["modifyvm", :id, "--memory", "20000"]
+      end
+      config.vm.provider :libvirt do |v|
+        v.memory = 20000
+      end
+      config.vm.provider :vmware_workstation do |v|
+        v.memory = 20000
+      end
+    end
+  end
+end
